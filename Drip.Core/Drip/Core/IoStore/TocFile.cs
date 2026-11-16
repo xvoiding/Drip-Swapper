@@ -1,429 +1,345 @@
-// Drip.Core/Drip/Core/IoStore/TocSignature.cs
+#nullable enable
 using System;
 using System.Buffers.Binary;
-using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace Drip.Core.IoStore;
 
-/// <summary>
-/// Result of re-sealing one patched chunk. Every field is a position plus the bytes that were
-/// there before and after, so Revert can put the container back exactly as it was.
-/// </summary>
-public sealed class TocSeal
+public sealed class TocFile
 {
-	public long HashRegionPos { get; init; } = -1;
+	public const int HeaderBytes = 144;
 
-	public string OriginalHashes { get; init; } = "";
+	public const int ChunkIdSize = 12;
 
-	public string PatchedHashes { get; init; } = "";
+	public const int OffsetLengthSize = 10;
 
-	public long SignaturePos { get; init; } = -1;
+	public const int BlockEntrySize = 12;
 
-	public string OriginalSignature { get; init; } = "";
+	public const byte ExportBundleDataType = 1;
 
-	public string PatchedSignature { get; init; } = "";
+	private static readonly byte[] Magic = "-==--==--==--==-"u8.ToArray();
 
-	public long MetaPos { get; init; } = -1;
+	private byte[] _raw = Array.Empty<byte>();
 
-	public string OriginalMeta { get; init; } = "";
+	public string Path { get; private set; } = "";
 
-	public string PatchedMeta { get; init; } = "";
+	public byte Version { get; private set; }
 
-	public bool Ok { get; init; }
+	public uint HeaderSize { get; private set; }
 
-	public string Error { get; init; } = "";
-}
+	public uint EntryCount { get; private set; }
 
-/// <summary>
-/// Re-seals a signed .utoc after one of its chunks has been rewritten.
-///
-/// A signed container stores, immediately after the compression method names:
-///
-///     uint32                 hash size (20)
-///     byte[hash size]        SHA-1 over the toc header
-///     byte[hash size]        SHA-1 over the whole block hash array
-///     byte[block count * 20] one SHA-1 per compressed block, over the bytes as stored in the .ucas
-///
-/// and, immediately after the directory index, one entry per chunk:
-///
-///     byte[32]               SHA-1 of the uncompressed chunk, zero padded
-///     byte                   meta flags
-///
-/// None of that is asymmetric - no private key is involved - so everything can be recomputed
-/// locally. Patching a block changes the bytes it hashes, which is what makes Fortnite log
-/// "Signature error detected in container '...'" and drop the session. Seal() puts the hashes
-/// back in step with the new content.
-///
-/// The exact byte span each hash covers is not documented, so the first seal on a container
-/// probes untouched blocks and the header: whatever reproduces the hashes the game shipped is
-/// the convention that gets used. If nothing reproduces, the default is used and the seal is
-/// reported as unproven rather than skipped, because a stale signature fails anyway.
-/// </summary>
-public sealed class TocSignature
-{
-	public const int Sha1Size = 20;
+	public uint BlockCount { get; private set; }
 
-	public const int MetaHashSize = 32;
+	public uint BlockEntryBytes { get; private set; }
 
-	public const int MetaEntrySize = MetaHashSize + 1;
+	public uint MethodNameCount { get; private set; }
 
-	public const int MinHeaderBytes = 144;
+	public uint MethodNameLength { get; private set; }
 
-	public const int MaxHeaderBytes = 4096;
+	public uint BlockSize { get; private set; }
 
-	private const int ProbeSamples = 16;
+	public uint DirectoryIndexSize { get; private set; }
 
-	private enum BlockSpan
+	public uint PartitionCount { get; private set; }
+
+	public ulong ContainerId { get; private set; }
+
+	public byte[] EncryptionKeyGuid { get; private set; } = new byte[16];
+
+	public byte Flags { get; private set; }
+
+	public uint PerfectHashSeedsCount { get; private set; }
+
+	public ulong PartitionSize { get; private set; } = ulong.MaxValue;
+
+	public uint ChunksWithoutPerfectHashCount { get; private set; }
+
+	public string[] Methods { get; private set; } = Array.Empty<string>();
+
+	public bool Encrypted => (Flags & 2) != 0;
+
+	public bool Signed => (Flags & 4) != 0;
+
+	public long ChunkIdsPos => 144L;
+
+	public long OffsetLengthsPos => ChunkIdsPos + (long)EntryCount * 12L;
+
+	public long BlocksPos { get; private set; }
+
+	public long SignatureSectionPos => BlocksPos + (long)BlockCount * 12L + (long)MethodNameCount * (long)MethodNameLength;
+
+	public static TocFile Load(string path)
 	{
-		Exact,
-		Aligned
-	}
-
-	private enum HeaderSpan
-	{
-		Full,
-		FirstHeaderOnly,
-		DirectorySizeZeroed
-	}
-
-	private static readonly ConcurrentDictionary<string, TocSignature?> Cache = new();
-
-	public int HashSize { get; }
-
-	public long TocSignaturePos { get; }
-
-	public long BlockSignaturePos { get; }
-
-	public long BlockHashesPos { get; }
-
-	public long MetaPos { get; }
-
-	public bool Proven { get; private set; }
-
-	public string ProvenHow { get; private set; } = "";
-
-	private BlockSpan _blockSpan = BlockSpan.Aligned;
-
-	private HeaderSpan _headerSpan = HeaderSpan.Full;
-
-	private int _headerBytes = MinHeaderBytes;
-
-	private TocSignature(IoContainer c, int hashSize, long tocSignaturePos, long blockSignaturePos, long blockHashesPos, long metaPos)
-	{
-		HashSize = hashSize;
-		TocSignaturePos = tocSignaturePos;
-		BlockSignaturePos = blockSignaturePos;
-		BlockHashesPos = blockHashesPos;
-		MetaPos = metaPos;
-	}
-
-	public static TocSignature? For(IoContainer c)
-	{
-		if (!c.Toc.Signed)
+		using FileStream fileStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+		byte[] array = new byte[144];
+		fileStream.ReadExactly(array);
+		TocFile tocFile = new TocFile
 		{
-			return null;
-		}
-		string path = c.LiveUtocPath;
-		long length;
-		long ticks;
-		try
-		{
-			FileInfo info = new FileInfo(path);
-			length = info.Length;
-			ticks = info.LastWriteTimeUtc.Ticks;
-		}
-		catch
-		{
-			return null;
-		}
-		string key = $"{path}|{length}|{ticks}";
-		return Cache.GetOrAdd(key, delegate
-		{
-			try
-			{
-				return Open(c);
-			}
-			catch
-			{
-				return null;
-			}
-		});
-	}
-
-	private static TocSignature? Open(IoContainer c)
-	{
-		string path = c.LiveUtocPath;
-		long length = new FileInfo(path).Length;
-		long pos = c.Toc.SignatureSectionPos;
-		if (pos <= 0 || pos + 4 > length)
-		{
-			return null;
-		}
-		byte[] sizeBytes = ReadAt(path, pos, 4);
-		int hashSize = BinaryPrimitives.ReadInt32LittleEndian(sizeBytes);
-		if (hashSize != Sha1Size)
-		{
-			return null;
-		}
-		long tocSignaturePos = pos + 4;
-		long blockSignaturePos = tocSignaturePos + hashSize;
-		long blockHashesPos = blockSignaturePos + hashSize;
-		long afterHashes = blockHashesPos + (long)c.Toc.BlockCount * Sha1Size;
-		long metaPos = afterHashes + c.Toc.DirectoryIndexSize;
-		if (metaPos + (long)c.Toc.EntryCount * MetaEntrySize > length)
-		{
-			return null;
-		}
-		if (c.Toc.EntryCount == 0 || c.Toc.BlockCount == 0)
-		{
-			return null;
-		}
-		TocSignature sig = new TocSignature(c, hashSize, tocSignaturePos, blockSignaturePos, blockHashesPos, metaPos)
-		{
-			_headerBytes = Math.Clamp((int)c.Toc.HeaderSize, MinHeaderBytes, MaxHeaderBytes)
+			Path = path
 		};
-		if (sig._headerBytes > length)
+		tocFile.ParseHeader(array);
+		long num = tocFile.BlocksPos + (long)tocFile.BlockCount * 12L + (long)tocFile.MethodNameCount * (long)tocFile.MethodNameLength;
+		if (num > fileStream.Length)
 		{
-			sig._headerBytes = MinHeaderBytes;
+			throw new InvalidDataException(path + ": toc truncated.");
 		}
-		sig.Probe(c);
-		return sig;
+		tocFile._raw = new byte[num];
+		Array.Copy(array, tocFile._raw, 144);
+		fileStream.Position = 144L;
+		fileStream.ReadExactly(tocFile._raw.AsSpan(144));
+		tocFile.ParseMethods();
+		return tocFile;
 	}
 
-	/// <summary>
-	/// Works out which byte span each hash covers by reproducing hashes the game shipped.
-	/// </summary>
-	private void Probe(IoContainer c)
+	private void ParseHeader(byte[] h)
 	{
-		string path = c.LiveUtocPath;
-		byte[] header = ReadAt(path, 0L, _headerBytes);
-		byte[] wantTocSig = ReadAt(path, TocSignaturePos, HashSize);
-		if (Sha1(header).AsSpan().SequenceEqual(wantTocSig))
+		if (!((ReadOnlySpan<byte>)h.AsSpan(0, 16)).SequenceEqual((ReadOnlySpan<byte>)Magic))
 		{
-			_headerSpan = HeaderSpan.Full;
-			Proven = true;
-			ProvenHow = "header hash reproduced over the toc header";
+			throw new InvalidDataException(Path + ": bad utoc magic.");
 		}
-		else if (_headerBytes != MinHeaderBytes && Sha1(header.AsSpan(0, MinHeaderBytes).ToArray()).AsSpan().SequenceEqual(wantTocSig))
+		Version = h[16];
+		HeaderSize = U32(h, 20);
+		EntryCount = U32(h, 24);
+		BlockCount = U32(h, 28);
+		BlockEntryBytes = U32(h, 32);
+		MethodNameCount = U32(h, 36);
+		MethodNameLength = U32(h, 40);
+		BlockSize = U32(h, 44);
+		DirectoryIndexSize = U32(h, 48);
+		PartitionCount = U32(h, 52);
+		ContainerId = BinaryPrimitives.ReadUInt64LittleEndian(h.AsSpan(56));
+		EncryptionKeyGuid = h[64..80];
+		Flags = h[80];
+		PerfectHashSeedsCount = U32(h, 84);
+		if (Version >= 3)
 		{
-			_headerSpan = HeaderSpan.FirstHeaderOnly;
-			_headerBytes = MinHeaderBytes;
-			Proven = true;
-			ProvenHow = "header hash reproduced over the first 144 header bytes";
+			PartitionSize = BinaryPrimitives.ReadUInt64LittleEndian(h.AsSpan(88));
 		}
-		else
+		ChunksWithoutPerfectHashCount = U32(h, 96);
+		if (BlockEntryBytes != 12)
 		{
-			byte[] zeroed = (byte[])header.Clone();
-			if (zeroed.Length >= 52)
+			throw new InvalidDataException($"{Path}: unexpected block entry size {BlockEntryBytes}.");
+		}
+		if (BlockSize == 0)
+		{
+			throw new InvalidDataException(Path + ": zero compression block size.");
+		}
+		if (PartitionSize == 0L)
+		{
+			PartitionSize = ulong.MaxValue;
+		}
+		long num = OffsetLengthsPos + (long)EntryCount * 10L;
+		if (Version >= 4)
+		{
+			num += 4L * (long)PerfectHashSeedsCount;
+		}
+		if (Version >= 5)
+		{
+			num += 4L * (long)ChunksWithoutPerfectHashCount;
+		}
+		BlocksPos = num;
+	}
+
+	private void ParseMethods()
+	{
+		long num = BlocksPos + (long)BlockCount * 12L;
+		Methods = new string[MethodNameCount];
+		for (int i = 0; i < MethodNameCount; i++)
+		{
+			Span<byte> span = _raw.AsSpan((int)(num + i * MethodNameLength), (int)MethodNameLength);
+			int num2 = ((ReadOnlySpan<byte>)span).IndexOf((byte)0);
+			Methods[i] = Encoding.ASCII.GetString((num2 >= 0) ? span.Slice(0, num2) : span);
+		}
+	}
+
+	public (ulong Id, byte Type) GetChunkId(int index)
+	{
+		int num = (int)(ChunkIdsPos + (long)index * 12L);
+		return (Id: BinaryPrimitives.ReadUInt64LittleEndian(_raw.AsSpan(num)), Type: _raw[num + 11]);
+	}
+
+	public (ulong Offset, ulong Length) GetOffsetLength(int index)
+	{
+		int num = (int)(OffsetLengthsPos + (long)index * 10L);
+		return (Offset: ReadBE40(_raw, num), Length: ReadBE40(_raw, num + 5));
+	}
+
+	public long OffsetLengthPosition(int index)
+	{
+		return OffsetLengthsPos + (long)index * 10L;
+	}
+
+	public long BlockPosition(int blockIndex)
+	{
+		return BlocksPos + (long)blockIndex * 12L;
+	}
+
+	public TocBlock GetBlock(int blockIndex)
+	{
+		int num = (int)BlockPosition(blockIndex);
+		ulong offset = BinaryPrimitives.ReadUInt64LittleEndian(_raw.AsSpan(num)) & 0xFFFFFFFFFFL;
+		uint compressedSize = (BinaryPrimitives.ReadUInt32LittleEndian(_raw.AsSpan(num + 4)) >> 8) & 0xFFFFFF;
+		uint num2 = BinaryPrimitives.ReadUInt32LittleEndian(_raw.AsSpan(num + 8));
+		return new TocBlock(offset, compressedSize, num2 & 0xFFFFFF, (byte)(num2 >> 24));
+	}
+
+	public byte[] RawBlockBytes(int blockIndex)
+	{
+		return _raw.AsSpan((int)BlockPosition(blockIndex), 12).ToArray();
+	}
+
+	public byte[] RawOffsetLengthBytes(int index)
+	{
+		return _raw.AsSpan((int)OffsetLengthPosition(index), 10).ToArray();
+	}
+
+	public IEnumerable<int> FindChunks(ulong id)
+	{
+		for (int i = 0; i < EntryCount; i++)
+		{
+			int start = (int)(ChunkIdsPos + (long)i * 12L);
+			if (BinaryPrimitives.ReadUInt64LittleEndian(_raw.AsSpan(start)) == id)
 			{
-				Array.Clear(zeroed, 48, 4);
-				if (Sha1(zeroed).AsSpan().SequenceEqual(wantTocSig))
-				{
-					_headerSpan = HeaderSpan.DirectorySizeZeroed;
-					Proven = true;
-					ProvenHow = "header hash reproduced with the directory index size zeroed";
-				}
+				yield return i;
 			}
 		}
-		byte[] allHashes = ReadAt(path, BlockHashesPos, (int)((long)c.Toc.BlockCount * Sha1Size));
-		byte[] wantBlockSig = ReadAt(path, BlockSignaturePos, HashSize);
-		bool arrayOk = Sha1(allHashes).AsSpan().SequenceEqual(wantBlockSig);
-		if (arrayOk && Proven)
+	}
+
+	public static byte[] EncodeBlock(ulong physicalOffset, uint compressed, uint uncompressed, byte method)
+	{
+		if (physicalOffset > 1099511627775L)
 		{
-			ProvenHow += "; block hash array reproduced";
+			throw new InvalidDataException("Physical offset exceeds 40 bits.");
 		}
-		int exactHits = 0;
-		int alignedHits = 0;
-		int tested = 0;
-		for (int i = 0; i < c.Toc.BlockCount && tested < ProbeSamples; i += Math.Max(c.Toc.BlockCount / ProbeSamples, 1))
+		if (compressed > 16777215 || uncompressed > 16777215)
 		{
-			tested++;
-			byte[] stored;
-			try
+			throw new InvalidDataException("Block size exceeds 24 bits.");
+		}
+		byte[] array = new byte[12];
+		for (int i = 0; i < 5; i++)
+		{
+			array[i] = (byte)(physicalOffset >> 8 * i);
+		}
+		for (int j = 0; j < 3; j++)
+		{
+			array[5 + j] = (byte)(compressed >> 8 * j);
+		}
+		for (int k = 0; k < 3; k++)
+		{
+			array[8 + k] = (byte)(uncompressed >> 8 * k);
+		}
+		array[11] = method;
+		return array;
+	}
+
+	public static byte[] EncodeOffsetLength(ulong offset, ulong length)
+	{
+		byte[] array = new byte[10];
+		WriteBE40(array, 0, offset);
+		WriteBE40(array, 5, length);
+		return array;
+	}
+
+	public static ulong ReadBE40(byte[] d, int p)
+	{
+		return ((ulong)d[p] << 32) | ((ulong)d[p + 1] << 24) | ((ulong)d[p + 2] << 16) | ((ulong)d[p + 3] << 8) | d[p + 4];
+	}
+
+	public static void WriteBE40(byte[] d, int p, ulong v)
+	{
+		d[p] = (byte)(v >> 32);
+		d[p + 1] = (byte)(v >> 24);
+		d[p + 2] = (byte)(v >> 16);
+		d[p + 3] = (byte)(v >> 8);
+		d[p + 4] = (byte)v;
+	}
+
+	public string? DescribeHeaderDifference(TocFile other)
+	{
+		if (Version != other.Version)
+		{
+			return $"version {Version} vs {other.Version}";
+		}
+		if (HeaderSize != other.HeaderSize)
+		{
+			return $"header size {HeaderSize} vs {other.HeaderSize}";
+		}
+		if (EntryCount != other.EntryCount)
+		{
+			return $"entry count {EntryCount} vs {other.EntryCount}";
+		}
+		if (BlockCount != other.BlockCount)
+		{
+			return $"compression block count {BlockCount} vs {other.BlockCount}";
+		}
+		if (BlockEntryBytes != other.BlockEntryBytes)
+		{
+			return $"block entry size {BlockEntryBytes} vs {other.BlockEntryBytes}";
+		}
+		if (MethodNameCount != other.MethodNameCount)
+		{
+			return $"compression method count {MethodNameCount} vs {other.MethodNameCount}";
+		}
+		if (MethodNameLength != other.MethodNameLength)
+		{
+			return $"compression method name length {MethodNameLength} vs {other.MethodNameLength}";
+		}
+		if (BlockSize != other.BlockSize)
+		{
+			return $"block size {BlockSize} vs {other.BlockSize}";
+		}
+		if (DirectoryIndexSize != other.DirectoryIndexSize)
+		{
+			return $"directory index size {DirectoryIndexSize} vs {other.DirectoryIndexSize}";
+		}
+		if (PartitionCount != other.PartitionCount)
+		{
+			return $"partition count {PartitionCount} vs {other.PartitionCount}";
+		}
+		if (ContainerId != other.ContainerId)
+		{
+			return "container id";
+		}
+		if (!((ReadOnlySpan<byte>)EncryptionKeyGuid.AsSpan()).SequenceEqual((ReadOnlySpan<byte>)other.EncryptionKeyGuid))
+		{
+			return "encryption key guid";
+		}
+		if (Flags != other.Flags)
+		{
+			return $"container flags {Flags} vs {other.Flags}";
+		}
+		return null;
+	}
+
+	public long[] PartitionEnds()
+	{
+		int num = (int)Math.Max(PartitionCount, 1u);
+		long[] array = new long[num];
+		for (int i = 0; i < BlockCount; i++)
+		{
+			TocBlock block = GetBlock(i);
+			int num2 = (int)((PartitionSize != ulong.MaxValue) ? (block.Offset / PartitionSize) : 0);
+			long num3 = (long)(((PartitionSize == ulong.MaxValue) ? block.Offset : (block.Offset % PartitionSize)) + IoContainer.Align16(block.CompressedSize));
+			if (num2 >= 0 && num2 < num && num3 > array[num2])
 			{
-				stored = c.ReadStored(i);
+				array[num2] = num3;
 			}
-			catch
-			{
-				continue;
-			}
-			TocBlock block = c.Toc.GetBlock(i);
-			byte[] want = allHashes.AsSpan(i * Sha1Size, Sha1Size).ToArray();
-			int exact = Math.Min((int)block.CompressedSize, stored.Length);
-			if (Sha1(stored.AsSpan(0, exact).ToArray()).AsSpan().SequenceEqual(want))
-			{
-				exactHits++;
-			}
-			if (Sha1(stored).AsSpan().SequenceEqual(want))
-			{
-				alignedHits++;
-			}
 		}
-		if (alignedHits > exactHits)
-		{
-			_blockSpan = BlockSpan.Aligned;
-		}
-		else if (exactHits > alignedHits)
-		{
-			_blockSpan = BlockSpan.Exact;
-		}
-		if (alignedHits + exactHits > 0)
-		{
-			Proven = true;
-			ProvenHow = (ProvenHow.Length > 0) ? (ProvenHow + "; block hashes reproduced") : "block hashes reproduced";
-		}
-		else if (ProvenHow.Length == 0)
-		{
-			ProvenHow = "nothing reproduced, defaults used";
-		}
+		return array;
 	}
 
-	/// <summary>
-	/// Rewrites every hash that the freshly written blocks invalidated.
-	/// </summary>
-	public static TocSeal? Seal(IoContainer c, int firstBlock, int[] blockLengths, int chunkIndex, byte[] stored, byte[] uncompressed)
+	public string GuidString()
 	{
-		if (!c.Toc.Signed || blockLengths.Length == 0)
-		{
-			return null;
-		}
-		TocSignature? sig = For(c);
-		if (sig == null)
-		{
-			return new TocSeal
-			{
-				Ok = false,
-				Error = "the signature section of " + c.Name + " could not be located, so it was left stale"
-			};
-		}
-		try
-		{
-			return sig.SealCore(c, firstBlock, blockLengths, chunkIndex, stored, uncompressed);
-		}
-		catch (Exception ex)
-		{
-			return new TocSeal
-			{
-				Ok = false,
-				Error = "re-sealing " + c.Name + " failed (" + ex.Message + ")"
-			};
-		}
+		return string.Concat(from i in Enumerable.Range(0, 4)
+			select BinaryPrimitives.ReadUInt32LittleEndian(EncryptionKeyGuid.AsSpan(i * 4)).ToString("X8"));
 	}
 
-	private TocSeal SealCore(IoContainer c, int firstBlock, int[] blockLengths, int chunkIndex, byte[] stored, byte[] uncompressed)
+	private static uint U32(byte[] d, int p)
 	{
-		string path = c.LiveUtocPath;
-		int blockSize = (int)c.Toc.BlockSize;
-		byte[] newHashes = new byte[blockLengths.Length * Sha1Size];
-		for (int i = 0; i < blockLengths.Length; i++)
-		{
-			int at = i * blockSize;
-			int len = _blockSpan == BlockSpan.Exact ? Math.Min(blockLengths[i], stored.Length - at) : Math.Min(IoContainer.Align16((uint)blockLengths[i]), stored.Length - at);
-			if (len <= 0)
-			{
-				throw new InvalidDataException("block " + (firstBlock + i) + " has no bytes to hash");
-			}
-			Sha1(stored.AsSpan(at, len)).CopyTo(newHashes.AsSpan(i * Sha1Size));
-		}
-		long hashPos = BlockHashesPos + (long)firstBlock * Sha1Size;
-		long metaPos = MetaPos + (long)chunkIndex * MetaEntrySize;
-		using FileStream fs = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
-		byte[] originalHashes = ReadFrom(fs, hashPos, newHashes.Length);
-		byte[] originalSignature = ReadFrom(fs, TocSignaturePos, HashSize * 2);
-		byte[] originalMeta = ReadFrom(fs, metaPos, MetaEntrySize);
-		WriteTo(fs, hashPos, newHashes);
-		byte[] allHashes = ReadFrom(fs, BlockHashesPos, (int)((long)c.Toc.BlockCount * Sha1Size));
-		byte[] blockSignature = Sha1(allHashes);
-		WriteTo(fs, BlockSignaturePos, blockSignature);
-		byte[] header = ReadFrom(fs, 0L, _headerBytes);
-		if (_headerSpan == HeaderSpan.DirectorySizeZeroed && header.Length >= 52)
-		{
-			Array.Clear(header, 48, 4);
-		}
-		else if (_headerSpan == HeaderSpan.FirstHeaderOnly && header.Length > MinHeaderBytes)
-		{
-			header = header.AsSpan(0, MinHeaderBytes).ToArray();
-		}
-		byte[] tocSignature = Sha1(header);
-		WriteTo(fs, TocSignaturePos, tocSignature);
-		byte[] meta = new byte[MetaEntrySize];
-		Sha1(uncompressed).CopyTo(meta.AsSpan(0, Sha1Size));
-		meta[MetaEntrySize - 1] = originalMeta[MetaEntrySize - 1];
-		WriteTo(fs, metaPos, meta);
-		fs.Flush(flushToDisk: true);
-		byte[] newSignature = new byte[HashSize * 2];
-		tocSignature.CopyTo(newSignature, 0);
-		blockSignature.CopyTo(newSignature, HashSize);
-		return new TocSeal
-		{
-			HashRegionPos = hashPos,
-			OriginalHashes = Convert.ToHexString(originalHashes),
-			PatchedHashes = Convert.ToHexString(newHashes),
-			SignaturePos = TocSignaturePos,
-			OriginalSignature = Convert.ToHexString(originalSignature),
-			PatchedSignature = Convert.ToHexString(newSignature),
-			MetaPos = metaPos,
-			OriginalMeta = Convert.ToHexString(originalMeta),
-			PatchedMeta = Convert.ToHexString(meta),
-			Ok = true
-		};
-	}
-
-	/// <summary>
-	/// True when the live hashes match what Seal wrote, i.e. nothing re-broke the seal.
-	/// </summary>
-	public static bool IsSealed(string utocPath, PatchRecord rec)
-	{
-		if (rec.HashRegionPos < 0 || rec.PatchedHashes.Length == 0)
-		{
-			return true;
-		}
-		try
-		{
-			byte[] want = Convert.FromHexString(rec.PatchedHashes);
-			return ReadAt(utocPath, rec.HashRegionPos, want.Length).AsSpan().SequenceEqual(want);
-		}
-		catch
-		{
-			return false;
-		}
-	}
-
-	public string Describe()
-	{
-		return Proven ? "signature convention: " + ProvenHow : "signature convention unproven";
-	}
-
-	private static byte[] Sha1(ReadOnlySpan<byte> data)
-	{
-		return SHA1.HashData(data);
-	}
-
-	private static byte[] ReadAt(string path, long pos, int count)
-	{
-		using FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-		return ReadFrom(fs, pos, count);
-	}
-
-	private static byte[] ReadFrom(FileStream fs, long pos, int count)
-	{
-		if (pos < 0 || pos + count > fs.Length)
-		{
-			throw new InvalidDataException($"{Path.GetFileName(fs.Name)}: region {pos}+{count} is outside the file ({fs.Length} bytes).");
-		}
-		byte[] buffer = new byte[count];
-		fs.Position = pos;
-		fs.ReadExactly(buffer);
-		return buffer;
-	}
-
-	private static void WriteTo(FileStream fs, long pos, byte[] data)
-	{
-		fs.Position = pos;
-		fs.Write(data);
+		return BinaryPrimitives.ReadUInt32LittleEndian(d.AsSpan(p));
 	}
 }
