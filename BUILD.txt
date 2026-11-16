@@ -1,0 +1,5 @@
+Drip Swapper - recovered source (decompiled from the Nov 3 build, plus Default Skin and Stellar changes).
+Needs the .NET 10 SDK on Windows.
+Build:
+  dotnet publish Drip.App/DripSwapper.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -o out
+Notes: code is machine-decompiled (names like text6 / flag14 are not original). Third-party DLLs are in libs/.

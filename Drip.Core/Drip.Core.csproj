@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Drip.Core</AssemblyName>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup>
+    <LangVersion>14.0</LangVersion>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <CheckForOverflowUnderflow>False</CheckForOverflowUnderflow>
+  </PropertyGroup>
+  <PropertyGroup>
+    <RootNamespace />
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="Drip.Core.FortniteModels.soldier_outline.bin" />
+    <None Remove="Drip.Core.Localization.Lang.fr.json" />
+    <None Remove="Drip.Core.Localization.Lang.ro.json" />
+    <EmbeddedResource Include="Drip.Core.FortniteModels.soldier_outline.bin" LogicalName="Drip.Core.FortniteModels.soldier_outline.bin" />
+    <EmbeddedResource Include="Drip.Core.Localization.Lang.fr.json" LogicalName="Drip.Core.Localization.Lang.fr.json" WithCulture="false" />
+    <EmbeddedResource Include="Drip.Core.Localization.Lang.ro.json" LogicalName="Drip.Core.Localization.Lang.ro.json" WithCulture="false" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="AssimpNet">
+      <HintPath>$(MSBuildThisFileDirectory)../libs/AssimpNet.dll</HintPath>
+    </Reference>
+    <Reference Include="StbImageSharp">
+      <HintPath>$(MSBuildThisFileDirectory)../libs/StbImageSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(MSBuildThisFileDirectory)../libs/Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="AssetsTools.NET">
+      <HintPath>$(MSBuildThisFileDirectory)../libs/AssetsTools.NET.dll</HintPath>
+    </Reference>
+    <Reference Include="AssetsTools.NET.Texture">
+      <HintPath>$(MSBuildThisFileDirectory)../libs/AssetsTools.NET.Texture.dll</HintPath>
+    </Reference>
+    <Reference Include="CUE4Parse">
+      <HintPath>$(MSBuildThisFileDirectory)../libs/CUE4Parse.dll</HintPath>
+    </Reference>
+    <Reference Include="StbImageWriteSharp">
+      <HintPath>$(MSBuildThisFileDirectory)../libs/StbImageWriteSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Oodle.NET">
+      <HintPath>$(MSBuildThisFileDirectory)../libs/Oodle.NET.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>

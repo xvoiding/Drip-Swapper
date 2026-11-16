@@ -1,0 +1,160 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>DripSwapper</AssemblyName>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <OutputType>WinExe</OutputType>
+    <UseWPF>True</UseWPF>
+    <TargetFramework>net10.0-windows7.0</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup>
+    <LangVersion>14.0</LangVersion>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <CheckForOverflowUnderflow>False</CheckForOverflowUnderflow>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <ItemGroup>
+    <ApplicationDefinition Remove="Drip/App/App.xaml" />
+    <ApplicationDefinition Include="Drip/App/App.xaml" Generator="MSBuild:Compile" SubType="Designer" LogicalName="app.xaml" />
+    <Page Remove="Drip/App/FallGuysWindow.xaml" />
+    <Page Remove="Drip/App/FunPanel.xaml" />
+    <Page Remove="Drip/App/GameChooserWindow.xaml" />
+    <Page Remove="Drip/App/MainWindow.xaml" />
+    <Page Remove="Drip/App/RocketLeagueWindow.xaml" />
+    <Page Remove="Drip/App/StellarWindow.xaml" />
+    <Page Include="Drip/App/FallGuysWindow.xaml" Generator="MSBuild:Compile" SubType="Designer" LogicalName="fallguyswindow.xaml" />
+    <Page Include="Drip/App/FunPanel.xaml" Generator="MSBuild:Compile" SubType="Designer" LogicalName="funpanel.xaml" />
+    <Page Include="Drip/App/GameChooserWindow.xaml" Generator="MSBuild:Compile" SubType="Designer" LogicalName="gamechooserwindow.xaml" />
+    <Page Include="Drip/App/MainWindow.xaml" Generator="MSBuild:Compile" SubType="Designer" LogicalName="mainwindow.xaml" />
+    <Page Include="Drip/App/RocketLeagueWindow.xaml" Generator="MSBuild:Compile" SubType="Designer" LogicalName="rocketleaguewindow.xaml" />
+    <Page Include="Drip/App/StellarWindow.xaml" Generator="MSBuild:Compile" SubType="Designer" LogicalName="stellarwindow.xaml" />
+    <Resource Remove="assets/builds/brick.png" />
+    <Resource Remove="assets/builds/metal.png" />
+    <Resource Remove="assets/builds/wood.png" />
+    <Resource Remove="assets/drip.ico" />
+    <Resource Remove="assets/stellar.png" />
+    <Resource Remove="assets/epictip/tip1.png" />
+    <Resource Remove="assets/epictip/tip2.png" />
+    <Resource Remove="assets/epictip/tip3.png" />
+    <Resource Remove="assets/epictip/tip4.png" />
+    <Resource Remove="assets/maps/arc_darc_p.png" />
+    <Resource Remove="assets/maps/arc_standard_p.png" />
+    <Resource Remove="assets/maps/beach_night_grs_p.png" />
+    <Resource Remove="assets/maps/beach_night_p.png" />
+    <Resource Remove="assets/maps/beach_p.png" />
+    <Resource Remove="assets/maps/chn_stadium_day_p.png" />
+    <Resource Remove="assets/maps/chn_stadium_p.png" />
+    <Resource Remove="assets/maps/cs_day_p.png" />
+    <Resource Remove="assets/maps/cs_hw_p.png" />
+    <Resource Remove="assets/maps/cs_p.png" />
+    <Resource Remove="assets/maps/default.png" />
+    <Resource Remove="assets/maps/eurostadium_night_p.png" />
+    <Resource Remove="assets/maps/eurostadium_p.png" />
+    <Resource Remove="assets/maps/eurostadium_rainy_p.png" />
+    <Resource Remove="assets/maps/farm_night_p.png" />
+    <Resource Remove="assets/maps/farm_p.png" />
+    <Resource Remove="assets/maps/farm_upsidedown_p.png" />
+    <Resource Remove="assets/maps/hoopsstadium_p.png" />
+    <Resource Remove="assets/maps/labs_circle_p.png" />
+    <Resource Remove="assets/maps/neotokyo_standard_p.png" />
+    <Resource Remove="assets/maps/neotokyo_toon_p.png" />
+    <Resource Remove="assets/maps/outlaw_oasis_p.png" />
+    <Resource Remove="assets/maps/outlaw_p.png" />
+    <Resource Remove="assets/maps/park_night_p.png" />
+    <Resource Remove="assets/maps/park_p.png" />
+    <Resource Remove="assets/maps/park_rainy_p.png" />
+    <Resource Remove="assets/maps/park_snowy_p.png" />
+    <Resource Remove="assets/maps/stadium_day_p.png" />
+    <Resource Remove="assets/maps/stadium_foggy_p.png" />
+    <Resource Remove="assets/maps/stadium_p.png" />
+    <Resource Remove="assets/maps/stadium_race_day_p.png" />
+    <Resource Remove="assets/maps/stadium_winter_p.png" />
+    <Resource Remove="assets/maps/street_p.png" />
+    <Resource Remove="assets/maps/trainstation_dawn_p.png" />
+    <Resource Remove="assets/maps/trainstation_night_p.png" />
+    <Resource Remove="assets/maps/trainstation_p.png" />
+    <Resource Remove="assets/maps/underwater_p.png" />
+    <Resource Remove="assets/maps/utopiastadium_dusk_p.png" />
+    <Resource Remove="assets/maps/utopiastadium_p.png" />
+    <Resource Remove="assets/maps/utopiastadium_snow_p.png" />
+    <Resource Remove="assets/maps/utopia_retro_p.png" />
+    <Resource Remove="assets/maps/wasteland_night_p.png" />
+    <Resource Remove="assets/maps/wasteland_night_s_p.png" />
+    <Resource Remove="assets/maps/wasteland_p.png" />
+    <Resource Include="assets/builds/brick.png" LogicalName="assets/builds/brick.png" />
+    <Resource Include="assets/builds/metal.png" LogicalName="assets/builds/metal.png" />
+    <Resource Include="assets/builds/wood.png" LogicalName="assets/builds/wood.png" />
+    <Resource Include="assets/drip.ico" LogicalName="assets/drip.ico" />
+    <Resource Include="assets/stellar.png" LogicalName="assets/stellar.png" />
+    <Resource Include="assets/epictip/tip1.png" LogicalName="assets/epictip/tip1.png" />
+    <Resource Include="assets/epictip/tip2.png" LogicalName="assets/epictip/tip2.png" />
+    <Resource Include="assets/epictip/tip3.png" LogicalName="assets/epictip/tip3.png" />
+    <Resource Include="assets/epictip/tip4.png" LogicalName="assets/epictip/tip4.png" />
+    <Resource Include="assets/maps/arc_darc_p.png" LogicalName="assets/maps/arc_darc_p.png" />
+    <Resource Include="assets/maps/arc_standard_p.png" LogicalName="assets/maps/arc_standard_p.png" />
+    <Resource Include="assets/maps/beach_night_grs_p.png" LogicalName="assets/maps/beach_night_grs_p.png" />
+    <Resource Include="assets/maps/beach_night_p.png" LogicalName="assets/maps/beach_night_p.png" />
+    <Resource Include="assets/maps/beach_p.png" LogicalName="assets/maps/beach_p.png" />
+    <Resource Include="assets/maps/chn_stadium_day_p.png" LogicalName="assets/maps/chn_stadium_day_p.png" />
+    <Resource Include="assets/maps/chn_stadium_p.png" LogicalName="assets/maps/chn_stadium_p.png" />
+    <Resource Include="assets/maps/cs_day_p.png" LogicalName="assets/maps/cs_day_p.png" />
+    <Resource Include="assets/maps/cs_hw_p.png" LogicalName="assets/maps/cs_hw_p.png" />
+    <Resource Include="assets/maps/cs_p.png" LogicalName="assets/maps/cs_p.png" />
+    <Resource Include="assets/maps/default.png" LogicalName="assets/maps/default.png" />
+    <Resource Include="assets/maps/eurostadium_night_p.png" LogicalName="assets/maps/eurostadium_night_p.png" />
+    <Resource Include="assets/maps/eurostadium_p.png" LogicalName="assets/maps/eurostadium_p.png" />
+    <Resource Include="assets/maps/eurostadium_rainy_p.png" LogicalName="assets/maps/eurostadium_rainy_p.png" />
+    <Resource Include="assets/maps/farm_night_p.png" LogicalName="assets/maps/farm_night_p.png" />
+    <Resource Include="assets/maps/farm_p.png" LogicalName="assets/maps/farm_p.png" />
+    <Resource Include="assets/maps/farm_upsidedown_p.png" LogicalName="assets/maps/farm_upsidedown_p.png" />
+    <Resource Include="assets/maps/hoopsstadium_p.png" LogicalName="assets/maps/hoopsstadium_p.png" />
+    <Resource Include="assets/maps/labs_circle_p.png" LogicalName="assets/maps/labs_circle_p.png" />
+    <Resource Include="assets/maps/neotokyo_standard_p.png" LogicalName="assets/maps/neotokyo_standard_p.png" />
+    <Resource Include="assets/maps/neotokyo_toon_p.png" LogicalName="assets/maps/neotokyo_toon_p.png" />
+    <Resource Include="assets/maps/outlaw_oasis_p.png" LogicalName="assets/maps/outlaw_oasis_p.png" />
+    <Resource Include="assets/maps/outlaw_p.png" LogicalName="assets/maps/outlaw_p.png" />
+    <Resource Include="assets/maps/park_night_p.png" LogicalName="assets/maps/park_night_p.png" />
+    <Resource Include="assets/maps/park_p.png" LogicalName="assets/maps/park_p.png" />
+    <Resource Include="assets/maps/park_rainy_p.png" LogicalName="assets/maps/park_rainy_p.png" />
+    <Resource Include="assets/maps/park_snowy_p.png" LogicalName="assets/maps/park_snowy_p.png" />
+    <Resource Include="assets/maps/stadium_day_p.png" LogicalName="assets/maps/stadium_day_p.png" />
+    <Resource Include="assets/maps/stadium_foggy_p.png" LogicalName="assets/maps/stadium_foggy_p.png" />
+    <Resource Include="assets/maps/stadium_p.png" LogicalName="assets/maps/stadium_p.png" />
+    <Resource Include="assets/maps/stadium_race_day_p.png" LogicalName="assets/maps/stadium_race_day_p.png" />
+    <Resource Include="assets/maps/stadium_winter_p.png" LogicalName="assets/maps/stadium_winter_p.png" />
+    <Resource Include="assets/maps/street_p.png" LogicalName="assets/maps/street_p.png" />
+    <Resource Include="assets/maps/trainstation_dawn_p.png" LogicalName="assets/maps/trainstation_dawn_p.png" />
+    <Resource Include="assets/maps/trainstation_night_p.png" LogicalName="assets/maps/trainstation_night_p.png" />
+    <Resource Include="assets/maps/trainstation_p.png" LogicalName="assets/maps/trainstation_p.png" />
+    <Resource Include="assets/maps/underwater_p.png" LogicalName="assets/maps/underwater_p.png" />
+    <Resource Include="assets/maps/utopiastadium_dusk_p.png" LogicalName="assets/maps/utopiastadium_dusk_p.png" />
+    <Resource Include="assets/maps/utopiastadium_p.png" LogicalName="assets/maps/utopiastadium_p.png" />
+    <Resource Include="assets/maps/utopiastadium_snow_p.png" LogicalName="assets/maps/utopiastadium_snow_p.png" />
+    <Resource Include="assets/maps/utopia_retro_p.png" LogicalName="assets/maps/utopia_retro_p.png" />
+    <Resource Include="assets/maps/wasteland_night_p.png" LogicalName="assets/maps/wasteland_night_p.png" />
+    <Resource Include="assets/maps/wasteland_night_s_p.png" LogicalName="assets/maps/wasteland_night_s_p.png" />
+    <Resource Include="assets/maps/wasteland_p.png" LogicalName="assets/maps/wasteland_p.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Drip.Core/Drip.Core.csproj" />
+    <Reference Include="System.Drawing.Common">
+      <HintPath>$(MSBuildThisFileDirectory)../libs/System.Drawing.Common.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <PropertyGroup>
+    <SatelliteResourceLanguages>en;cs;de;es;fr;it;ja;ko;pl;pt-BR;ru;tr;zh-Hans;zh-Hant</SatelliteResourceLanguages>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="Drips/**/*" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Looks/**/*" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="assimp.dll" CopyToOutputDirectory="PreserveNewest" />
+    <Reference Include="IndexRange"><HintPath>$(MSBuildThisFileDirectory)../libs/IndexRange.dll</HintPath></Reference>
+    <Reference Include="K4os.Compression.LZ4.Streams"><HintPath>$(MSBuildThisFileDirectory)../libs/K4os.Compression.LZ4.Streams.dll</HintPath></Reference>
+    <Reference Include="K4os.Hash.xxHash"><HintPath>$(MSBuildThisFileDirectory)../libs/K4os.Hash.xxHash.dll</HintPath></Reference>
+    <Reference Include="Microsoft.Bcl.Memory"><HintPath>$(MSBuildThisFileDirectory)../libs/Microsoft.Bcl.Memory.dll</HintPath></Reference>
+    <Reference Include="Serilog.Sinks.Console"><HintPath>$(MSBuildThisFileDirectory)../libs/Serilog.Sinks.Console.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,65 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<UserControl x:Class="Drip.App.FunPanel" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:app="clr-namespace:Drip.App;assembly=DripSwapper">
+  <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <StackPanel MaxWidth="920" HorizontalAlignment="Left" Margin="0,0,10,16">
+      <Border Style="{StaticResource Card}" Margin="0,0,0,16">
+        <StackPanel>
+          <TextBlock Text="Save a loadout" Style="{StaticResource H2}" />
+          <TextBlock Text="Saves everything that's swapped right now. Bring it back in one click later, or send it to a friend." Style="{StaticResource Muted}" HorizontalAlignment="Left" Margin="0,4,0,0" />
+          <Grid Margin="0,14,0,0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBox Name="FitName" Height="36" MaxLength="40" Text="My loadout" VerticalContentAlignment="Center" />
+            <Button Name="FitSaveBtn" Grid.Column="1" Content="Save" Margin="10,0,0,0" Style="{StaticResource Primary}" Click="FitSave_Click" />
+          </Grid>
+          <TextBlock Name="FitStatus" Style="{StaticResource Muted}" HorizontalAlignment="Left" Margin="0,10,0,0" />
+        </StackPanel>
+      </Border>
+      <Border Style="{StaticResource Card}" Margin="0,0,0,16">
+        <StackPanel>
+          <TextBlock Text="Your loadouts" Style="{StaticResource H2}" />
+          <ItemsControl Name="FitsHost" Margin="0,10,0,0">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Style="{StaticResource Inset}" Margin="0,0,0,8">
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel VerticalAlignment="Center" Margin="0,0,14,0">
+                      <TextBlock Style="{StaticResource H2}" TextTrimming="CharacterEllipsis" Text="{Binding Name}" />
+                      <TextBlock Style="{StaticResource Muted}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" Margin="0,2,0,0" Text="{Binding Sub}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                      <Button Content="Apply" Style="{StaticResource Primary}" Tag="{Binding}" Click="FitApply_Click" />
+                      <Button Content="Share" Margin="6,0,0,0" ToolTip="Copies a code your friends can paste into Import" Tag="{Binding}" Click="FitShare_Click" />
+                      <Button Content="Delete" Margin="6,0,0,0" Style="{StaticResource Quiet}" Tag="{Binding}" Click="FitDelete_Click" />
+                    </StackPanel>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Name="FitsEmpty" Text="No loadouts yet. Swap something, then press Save above." Style="{StaticResource Muted}" HorizontalAlignment="Left" Margin="0,10,0,0" />
+        </StackPanel>
+      </Border>
+      <Border Style="{StaticResource Card}">
+        <StackPanel>
+          <TextBlock Text="Import a loadout" Style="{StaticResource H2}" />
+          <TextBlock Text="Paste a code from a friend (it starts with DRIP1-)." Style="{StaticResource Muted}" HorizontalAlignment="Left" Margin="0,4,0,0" />
+          <Grid Margin="0,12,0,0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBox Name="ImportBox" Height="36" VerticalContentAlignment="Center" />
+            <Button Grid.Column="1" Content="Import" Margin="10,0,0,0" Click="FitImport_Click" />
+          </Grid>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

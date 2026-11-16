@@ -1,0 +1,566 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Window x:Class="Drip.App.FallGuysWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:fx="clr-namespace:System.Windows.Media.Effects;assembly=PresentationCore" xmlns:local="clr-namespace:Drip.App" Title="Drip Swapper" Icon="Assets/drip.ico" Width="1180" Height="740" WindowStartupLocation="CenterScreen" WindowStyle="None" AllowsTransparency="True" Background="#00FFFFFF" ResizeMode="CanResize" AllowDrop="True" FontFamily="Segoe UI" TextOptions.TextFormattingMode="Display" Drop="Window_Drop" PreviewDragOver="Window_DragOver" PreviewKeyDown="Window_PreviewKeyDown">
+  <FrameworkElement.Resources>
+    <ResourceDictionary>
+      <Style x:Key="HomeTile" TargetType="{x:Type Border}">
+        <Setter Property="Background" Value="{DynamicResource CardBg}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Line}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Border.CornerRadius" Value="14" />
+        <Setter Property="Border.Padding" Value="18,16" />
+        <Setter Property="FrameworkElement.Cursor" Value="Hand" />
+        <Style.Triggers>
+          <Trigger Property="UIElement.IsMouseOver" Value="True">
+            <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
+            <Setter Property="Background" Value="{DynamicResource PanelHover}" />
+          </Trigger>
+        </Style.Triggers>
+      </Style>
+      <Style x:Key="NavTitle" TargetType="{x:Type TextBlock}" BasedOn="{StaticResource H1}">
+        <Setter Property="FontSize" Value="26" />
+      </Style>
+      <Style x:Key="Eyebrow" TargetType="{x:Type TextBlock}" BasedOn="{StaticResource Overline}" />
+      <Style x:Key="Label" TargetType="{x:Type TextBlock}">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Foreground" Value="{DynamicResource Text2}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+      </Style>
+      <Style x:Key="PickItem" TargetType="{x:Type ListBoxItem}">
+        <Setter Property="Margin" Value="0,0,0,6" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="FrameworkElement.Cursor" Value="Hand" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="{x:Type ListBoxItem}">
+              <Border Name="bd" Background="{DynamicResource External}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="12" Padding="12,9">
+                <ContentPresenter />
+              </Border>
+              <ControlTemplate.Triggers>
+                <Trigger Property="UIElement.IsMouseOver" Value="True">
+                  <Setter TargetName="bd" Value="{DynamicResource PanelHover}" Property="Border.Background" />
+                </Trigger>
+                <Trigger Property="ListBoxItem.IsSelected" Value="True">
+                  <Setter TargetName="bd" Value="{DynamicResource PanelHover}" Property="Border.Background" />
+                  <Setter TargetName="bd" Value="{DynamicResource Accent}" Property="Border.BorderBrush" />
+                </Trigger>
+              </ControlTemplate.Triggers>
+            </ControlTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
+      <Style x:Key="PickList" TargetType="{x:Type ListBox}">
+        <Setter Property="Background" Value="#00FFFFFF" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="ItemContainerStyle" Value="{StaticResource PickItem}" />
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+        <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
+        <Setter Property="VirtualizingPanel.ScrollUnit" Value="Pixel" />
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="{x:Type ListBox}">
+              <ScrollViewer Focusable="False" Padding="0" CanContentScroll="True">
+                <ItemsPresenter />
+              </ScrollViewer>
+            </ControlTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
+      <DataTemplate x:Key="WardRow">
+        <Grid Background="#00FFFFFF" ToolTip="Right-click to star it" MouseRightButtonUp="WardRow_Fav">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+          </Grid.ColumnDefinitions>
+          <Border Width="34" Height="34" CornerRadius="10" VerticalAlignment="Center" Background="{Binding Tint}">
+            <TextBlock FontWeight="Bold" Foreground="#CC000000" HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding Initial}" />
+          </Border>
+          <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+            <TextBlock TextTrimming="CharacterEllipsis" FontWeight="SemiBold" Foreground="{DynamicResource TextBright}">
+              <Run Foreground="{DynamicResource Accent}" Text="{Binding Mark, Mode=OneWay}" />
+              <Run Text="{Binding Name, Mode=OneWay}" />
+            </TextBlock>
+            <TextBlock FontSize="11.5" Foreground="{DynamicResource Text2}" TextTrimming="CharacterEllipsis" Text="{Binding Sub}" />
+          </StackPanel>
+        </Grid>
+      </DataTemplate>
+      <DataTemplate x:Key="SwapRow">
+        <Border Margin="0,0,0,10" Padding="16,12" Style="{StaticResource Card}">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Border Width="40" Height="40" CornerRadius="12" VerticalAlignment="Center" Background="{Binding TargetTint}">
+              <TextBlock FontWeight="Bold" Foreground="#CC000000" HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding TargetInitial}" />
+            </Border>
+            <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center">
+              <TextBlock FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextBright}" TextTrimming="CharacterEllipsis" Text="{Binding Title}" />
+              <TextBlock FontSize="12" Foreground="{DynamicResource Text2}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" Text="{Binding Subtitle}" />
+            </StackPanel>
+            <Button Grid.Column="2" Content="Undo" Tag="{Binding}" Click="SwapUndo_Click" />
+          </Grid>
+        </Border>
+      </DataTemplate>
+      <DataTemplate x:Key="ModelRow">
+        <Border Margin="0,0,0,10" Padding="14,12" Style="{StaticResource Card}">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="96" />
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Border Width="84" Height="84" CornerRadius="12" Background="#16161A" ClipToBounds="True" HorizontalAlignment="Left">
+              <Image Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" Source="{Binding Icon}" />
+            </Border>
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="6,0,12,0">
+              <TextBlock FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextBright}" TextTrimming="CharacterEllipsis" Text="{Binding Name}" />
+              <TextBlock FontSize="12" Foreground="{DynamicResource Text2}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" Text="{Binding Notes}" />
+              <WrapPanel Margin="0,8,0,0">
+                <Border Style="{StaticResource Chip}">
+                  <TextBlock FontSize="11" Foreground="{DynamicResource TextBright}" Text="{Binding Triangles}" />
+                </Border>
+                <Border Style="{StaticResource Chip}">
+                  <TextBlock FontSize="11" Foreground="{DynamicResource Text2}" Text="{Binding Author}" />
+                </Border>
+                <Border Style="{StaticResource Chip}" Visibility="{Binding ActiveVisibility}">
+                  <TextBlock Text="On your bean" FontSize="11" Foreground="{DynamicResource Good}" />
+                </Border>
+              </WrapPanel>
+            </StackPanel>
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+              <Button Content="Wear it" MinWidth="88" Style="{StaticResource Primary}" Click="ModelWear_Click" />
+              <Button Content="View" MinWidth="64" Margin="8,0,0,0" ToolTip="Look at it from every side" Click="ModelView_Click" />
+              <Button Content="Export" MinWidth="72" Margin="8,0,0,0" ToolTip="Save a .dripFG file to share" Click="ModelExport_Click" />
+              <Button Content="Delete" MinWidth="64" Height="36" Margin="4,0,0,0" Style="{StaticResource Quiet}" Click="ModelDelete_Click" />
+            </StackPanel>
+          </Grid>
+        </Border>
+      </DataTemplate>
+    </ResourceDictionary>
+  </FrameworkElement.Resources>
+  <Border CornerRadius="14" Background="{DynamicResource WindowBg}" BorderBrush="{DynamicResource Line}" BorderThickness="1">
+    <Grid>
+      <Border Background="{DynamicResource Glow}" CornerRadius="14" IsHitTestVisible="False" />
+      <Grid>
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+          </Grid.RowDefinitions>
+          <Grid Row="0" Background="#00FFFFFF" Margin="28,14,14,0" MouseLeftButtonDown="TopBar_MouseDown">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+              <Image Source="{StaticResource LogoMark}" Width="20" Height="20" ToolTip="Drip Swapper" />
+              <TextBlock Text="Drip Swapper" FontFamily="{StaticResource Display}" FontSize="22" Foreground="{DynamicResource TextBright}" Margin="10,0,16,2" VerticalAlignment="Center" />
+              <Button Style="{StaticResource GameChip}" Content="Fall Guys" ToolTip="Switch game" Click="SwitchGame_Click" />
+            </StackPanel>
+            <Border Grid.Column="1" Style="{StaticResource TabCapsule}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="12,0">
+              <StackPanel Orientation="Horizontal">
+                <RadioButton Name="TabHome" Style="{StaticResource NavTab}" Content="Home" Tag="Home" Click="Tab_Click" />
+                <RadioButton Name="TabWardrobe" Style="{StaticResource NavTab}" Content="Wardrobe" Tag="Wardrobe" Click="Tab_Click" />
+                <RadioButton Name="TabModels" Style="{StaticResource NavTab}" Content="Models" Tag="Models" Click="Tab_Click" />
+                <RadioButton Name="TabMaker" Style="{StaticResource NavTab}" Content="Maker" Tag="Maker" Click="Tab_Click" />
+                <RadioButton Name="TabSwaps" Style="{StaticResource NavTab}" Content="On you" Tag="Swaps" Click="Tab_Click" />
+                <RadioButton Name="TabFun" Style="{StaticResource NavTab}" Content="Loadouts" Tag="Fun" Click="Tab_Click" />
+                <RadioButton Name="TabSettings" Style="{StaticResource NavTab}" Content="Settings" Tag="Settings" Click="Tab_Click" />
+              </StackPanel>
+            </Border>
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+              <Button Content="Discord" Style="{StaticResource Quiet}" ToolTip="Join our Discord: help, new drips and updates" Click="Discord_Click" />
+              <Button Style="{StaticResource WinBtn}" Content="{StaticResource IcoContrast}" ToolTip="Switch between light and dark" Click="Theme_Click" />
+              <Button Style="{StaticResource WinBtn}" Content="{StaticResource IcoMin}" Click="Minimize_Click" />
+              <Button Style="{StaticResource WinBtn}" Content="{StaticResource IcoClose}" Click="Close_Click" />
+            </StackPanel>
+            <ProgressBar Name="BusyBar" Grid.ColumnSpan="3" IsIndeterminate="True" Visibility="Hidden" VerticalAlignment="Bottom" Margin="-28,0,-14,-6" />
+          </Grid>
+          <Grid Row="1" Background="#00FFFFFF" Margin="40,22,40,0" MouseLeftButtonDown="TopBar_MouseDown">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel VerticalAlignment="Bottom" Margin="0,0,16,0">
+              <TextBlock Name="PageTitle" Text="Home" Style="{StaticResource H1}" />
+              <TextBlock Name="PageSub" Style="{StaticResource Muted}" FontSize="14" Margin="2,0,0,0" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+          </Grid>
+          <Border Name="OpenBanner" Grid.Row="2" Visibility="Collapsed" Margin="40,12,40,0" Style="{StaticResource WarnStrip}">
+            <StackPanel Orientation="Horizontal">
+              <Path Data="{StaticResource IcoWarn}" Fill="{DynamicResource Warn}" Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Top" Margin="0,1,0,0" />
+              <TextBlock Name="OpenBannerText" Style="{StaticResource Body}" FontSize="13" Margin="12,0,0,0" VerticalAlignment="Center" />
+            </StackPanel>
+          </Border>
+          <Grid Row="3" Margin="40,14,40,14">
+            <ScrollViewer Name="HomePage" VerticalScrollBarVisibility="Auto">
+              <StackPanel Margin="0,0,10,0">
+                <StackPanel>
+                  <Grid Margin="0,6,0,0">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                      <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Button Style="{StaticResource Slot}" MinHeight="230" Margin="0,0,8,0" Click="Start_Click">
+                      <Grid>
+                        <TextBlock Text="You have" Foreground="{DynamicResource SlotText2}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Top" />
+                        <StackPanel VerticalAlignment="Bottom">
+                          <Border Width="52" Height="52" CornerRadius="26" Background="{DynamicResource SlotChip}" HorizontalAlignment="Left">
+                            <Path Data="{StaticResource IcoPlus}" Fill="{DynamicResource SlotText}" Width="20" Height="20" Stretch="Uniform" />
+                          </Border>
+                          <TextBlock Text="Your bean" FontFamily="{StaticResource Display}" FontSize="30" Foreground="{DynamicResource SlotText}" TextWrapping="Wrap" Margin="0,16,0,0" />
+                          <TextBlock Text="The normal bean, exactly as the game ships it." Foreground="{DynamicResource SlotText2}" FontSize="12.5" LineHeight="18" TextWrapping="Wrap" Margin="0,4,0,0" />
+                        </StackPanel>
+                      </Grid>
+                    </Button>
+                    <Border Grid.Column="1" Width="52" Height="52" CornerRadius="26" Background="{DynamicResource Accent}" Margin="-14,0" Panel.ZIndex="2" VerticalAlignment="Center" IsHitTestVisible="False">
+                      <Path Data="{StaticResource IcoSwap}" Fill="{DynamicResource OnAccent}" Width="22" Height="22" Stretch="Uniform" />
+                    </Border>
+                    <Button Grid.Column="2" Style="{StaticResource Slot}" MinHeight="230" Margin="8,0,0,0" Click="Start_Click">
+                      <Grid>
+                        <TextBlock Text="You want" Foreground="{DynamicResource SlotText2}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Top" />
+                        <StackPanel VerticalAlignment="Bottom">
+                          <Border Width="52" Height="52" CornerRadius="26" Background="{DynamicResource SlotChip}" HorizontalAlignment="Left">
+                            <Path Data="{StaticResource IcoPlus}" Fill="{DynamicResource SlotText}" Width="20" Height="20" Stretch="Uniform" />
+                          </Border>
+                          <TextBlock Text="Pick a model" FontFamily="{StaticResource Display}" FontSize="30" Foreground="{DynamicResource SlotText}" TextWrapping="Wrap" Margin="0,16,0,0" />
+                          <TextBlock Text="Any 3D model: FBX, OBJ, GLB and more. Or one that comes with the app." Foreground="{DynamicResource SlotText2}" FontSize="12.5" LineHeight="18" TextWrapping="Wrap" Margin="0,4,0,0" />
+                        </StackPanel>
+                      </Grid>
+                    </Button>
+                  </Grid>
+                  <StackPanel Orientation="Horizontal" Margin="0,22,0,0">
+                    <Button Name="StartBtn" Content="Pick a model" MinWidth="200" Style="{StaticResource Go}" Click="Start_Click" />
+                    <Button Content="Undo everything" MinWidth="160" Height="52" Margin="10,0,0,0" ToolTip="Puts all your original game files back" Click="RevertAll_Click" />
+                  </StackPanel>
+                  <TextBlock Name="ConnectMsg" Style="{StaticResource Muted}" Margin="2,10,0,0" Text="Starting up..." />
+                  <Border Style="{StaticResource WarnStrip}" Margin="0,18,0,0">
+                    <StackPanel Orientation="Horizontal">
+                      <Path Data="{StaticResource IcoWarn}" Fill="{DynamicResource Warn}" Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Top" Margin="0,1,12,0" />
+                      <TextBlock Style="{StaticResource Body}" FontSize="12" LineHeight="18" MaxWidth="620" Text="Fall Guys uses Easy Anti-Cheat and swapping changes game files. Drip Swapper does nothing to hide that, so use it at your own risk. Press Undo everything before you play online. If the game acts up, Verify in the Epic launcher repairs it." />
+                    </StackPanel>
+                  </Border>
+                  <TextBlock Text="OR START WITH" Style="{StaticResource Overline}" Margin="2,24,0,10" />
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="12" />
+                      <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" Style="{StaticResource HomeTile}" Tag="Maker" MouseLeftButtonUp="HomeTile_Click">
+                      <StackPanel>
+                        <Path Data="{StaticResource IcoCube}" Width="26" Height="26" Stretch="Uniform" Fill="{DynamicResource AccentB}" HorizontalAlignment="Left" />
+                        <TextBlock Text="Make a model" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextBright}" Margin="0,12,0,0" />
+                        <TextBlock Text="Turn an FBX, OBJ or GLB file into a bean you can wear." FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Text2}" Margin="0,4,0,0" LineHeight="17" />
+                      </StackPanel>
+                    </Border>
+                    <Border Grid.Column="2" Style="{StaticResource HomeTile}" Tag="Models" MouseLeftButtonUp="HomeTile_Click">
+                      <StackPanel>
+                        <Path Data="{StaticResource IcoBox}" Width="26" Height="26" Stretch="Uniform" Fill="{DynamicResource Good}" HorizontalAlignment="Left" />
+                        <TextBlock Text="My models" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextBright}" Margin="0,12,0,0" />
+                        <TextBlock Text="Wear one of the models that came with the app, or one you saved." FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Text2}" Margin="0,4,0,0" LineHeight="17" />
+                      </StackPanel>
+                    </Border>
+                  </Grid>
+                  <Border Style="{StaticResource Card}" Padding="20,8" Margin="0,16,0,6">
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="34" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <Ellipse Name="SetupGameDot" Width="16" Height="16" Fill="{DynamicResource Danger}" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="2,12,0,12" />
+                      <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,12">
+                        <TextBlock Text="Your game" Foreground="{DynamicResource TextBright}" FontSize="15" FontWeight="Bold" />
+                        <TextBlock Name="SetupGameText" Foreground="{DynamicResource Text2}" FontSize="12" TextWrapping="Wrap" Margin="0,3,16,0" LineHeight="18" />
+                      </StackPanel>
+                      <Button Name="SetupGameBtn" Grid.Column="2" Content="Find game…" MinWidth="140" VerticalAlignment="Center" Click="SetupGame_Click" />
+                    </Grid>
+                  </Border>
+                </StackPanel>
+              </StackPanel>
+            </ScrollViewer>
+            <Grid Name="WardrobePage" Visibility="Collapsed">
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+              </Grid.RowDefinitions>
+              <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                <RadioButton Name="WardCostumes" GroupName="WardKind" Style="{StaticResource Pill}" Content="Costumes" IsChecked="True" Click="WardKind_Click" />
+                <RadioButton Name="WardEmotes" GroupName="WardKind" Style="{StaticResource Pill}" Content="Emotes" Click="WardKind_Click" />
+                <CheckBox Name="WardFavOnly" Content="★ Favorites" Margin="16,0,0,0" VerticalAlignment="Center" Checked="WardFilter_Changed" Unchecked="WardFilter_Changed" />
+              </StackPanel>
+              <Grid Row="1">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="16" />
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                  </Grid.RowDefinitions>
+                  <TextBlock Name="WardLabelA" Text="The costume you equip" Style="{StaticResource H2}" />
+                  <TextBox Name="WardSearchA" Grid.Row="1" Margin="0,8,0,8" ToolTip="Search by name" TextChanged="WardFilter_Changed" />
+                  <ListBox Name="WardListA" Grid.Row="2" Style="{StaticResource PickList}" ItemTemplate="{StaticResource WardRow}" />
+                </Grid>
+                <Grid Column="2">
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                  </Grid.RowDefinitions>
+                  <TextBlock Name="WardLabelB" Text="Make it look like" Style="{StaticResource H2}" />
+                  <TextBox Name="WardSearchB" Grid.Row="1" Margin="0,8,0,8" ToolTip="Search by name" TextChanged="WardFilter_Changed" />
+                  <ListBox Name="WardListB" Grid.Row="2" Style="{StaticResource PickList}" ItemTemplate="{StaticResource WardRow}" />
+                </Grid>
+              </Grid>
+              <StackPanel Grid.Row="2" Margin="0,12,0,0">
+                <StackPanel Orientation="Horizontal">
+                  <Button Content="Swap them" Style="{StaticResource Primary}" Click="WardSwap_Click" />
+                  <Button Content="Surprise me" Margin="8,0,0,0" ToolTip="Picks a random look for the one on the left" Click="WardSurprise_Click" />
+                  <Button Content="Clone army" Margin="8,0,0,0" ToolTip="Makes up to 40 of your costumes (or emotes) all look like the one picked on the right" Click="WardClone_Click" />
+                  <Button Content="Shuffle 12" Margin="8,0,0,0" ToolTip="12 random costumes (or emotes) get a random look each" Click="WardShuffle_Click" />
+                  <Button Content="Put it all back" Margin="8,0,0,0" Style="{StaticResource Quiet}" ToolTip="Removes every costume or emote swap of the kind shown" Click="WardClear_Click" />
+                </StackPanel>
+                <TextBlock Name="WardStatus" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,8,0,0" />
+              </StackPanel>
+            </Grid>
+            <Grid Name="FunPage" Visibility="Collapsed">
+              <local:FunPanel x:Name="FunCtl" />
+            </Grid>
+            <Grid Name="ModelsPage" Visibility="Collapsed">
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+              </Grid.RowDefinitions>
+              <WrapPanel Margin="0,0,0,10">
+                <Button Content="Make a model" MinWidth="150" Margin="0,0,10,4" Style="{StaticResource Primary}" Click="NewModel_Click" />
+                <Button Content="Add a .dripFG file…" MinWidth="170" Margin="0,0,10,4" Click="AddDrip_Click" />
+                <Button Content="Open models folder" Margin="0,0,10,4" Style="{StaticResource Quiet}" Click="OpenModels_Click" />
+                <Button Name="ClearBeanBtn" Content="Go back to the normal bean" Margin="0,0,10,4" Style="{StaticResource Quiet}" Visibility="Collapsed" Click="ClearBean_Click" />
+              </WrapPanel>
+              <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                  <ItemsControl Name="ModelsHost" ItemTemplate="{StaticResource ModelRow}" />
+                  <TextBlock Name="ModelsEmpty" Text="No models yet. Press Make a model, or drop a 3D file on this window." Style="{StaticResource Muted}" FontSize="13" Margin="4,20,0,0" Visibility="Collapsed" />
+                </StackPanel>
+              </ScrollViewer>
+            </Grid>
+            <Grid Name="MakerPage" Visibility="Collapsed">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="300" />
+                <ColumnDefinition Width="20" />
+                <ColumnDefinition Width="340" />
+              </Grid.ColumnDefinitions>
+              <Border Style="{StaticResource Card}" Padding="14">
+                <Grid>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                  </Grid.RowDefinitions>
+                  <Border CornerRadius="12" Background="#16161A" ClipToBounds="True">
+                    <Grid>
+                      <Image Name="MakerPreview" Stretch="Uniform" Cursor="SizeWE" RenderOptions.BitmapScalingMode="HighQuality" MouseLeftButtonDown="Preview_Down" MouseMove="Preview_Move" MouseLeftButtonUp="Preview_Up" />
+                      <StackPanel Name="MakerEmpty" VerticalAlignment="Center" HorizontalAlignment="Center" IsHitTestVisible="False">
+                        <Path Data="{StaticResource IcoCube}" Width="46" Height="46" Stretch="Uniform" Fill="{DynamicResource Line}" HorizontalAlignment="Center" />
+                        <TextBlock Text="Drop a 3D file here" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextBright}" HorizontalAlignment="Center" Margin="0,14,0,0" />
+                        <TextBlock Name="FormatsText" Foreground="{DynamicResource Text2}" FontSize="12" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="360" Margin="0,6,0,0" LineHeight="18" />
+                      </StackPanel>
+                      <Border Name="MakerBusy" Visibility="Collapsed" Background="#99101013">
+                        <TextBlock Text="Working…" Foreground="{DynamicResource TextBright}" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      </Border>
+                    </Grid>
+                  </Border>
+                  <Grid Row="1" Margin="2,10,2,0">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Name="MakerInfo" Foreground="{DynamicResource Text2}" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                      <Button Content="Front" Height="28" MinWidth="56" Padding="10,0" FontSize="12" Click="ViewFront_Click" />
+                      <Button Content="Side" Height="28" MinWidth="56" Padding="10,0" Margin="6,0,0,0" FontSize="12" Click="ViewSide_Click" />
+                      <Button Content="Back" Height="28" MinWidth="56" Padding="10,0" Margin="6,0,0,0" FontSize="12" Click="ViewBack_Click" />
+                      <Button Content="3/4" Height="28" MinWidth="56" Padding="10,0" Margin="6,0,0,0" FontSize="12" Click="ViewAngle_Click" />
+                    </StackPanel>
+                  </Grid>
+                </Grid>
+              </Border>
+              <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="0,0,8,0">
+                  <Button Content="Choose a 3D file…" Height="42" Style="{StaticResource Primary}" Click="ChooseModel_Click" />
+                  <TextBlock Name="MakerFile" Foreground="{DynamicResource Text2}" FontSize="12" Margin="2,8,0,0" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Text="TURN AND SIZE" Style="{StaticResource Eyebrow}" Margin="2,20,0,6" />
+                  <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                    <Button Content="Turn 90°" Height="30" MinWidth="92" FontSize="12" ToolTip="The bean faces the camera: turn the model until its face does too" Click="Turn_Click" />
+                    <Button Content="Turn back" Height="30" MinWidth="92" Margin="8,0,0,0" FontSize="12" Click="TurnBack_Click" />
+                  </StackPanel>
+                  <Grid Margin="0,6,0,0">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="92" />
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="52" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Turn" Style="{StaticResource Label}" />
+                    <Slider Name="YawSlider" Grid.Column="1" Minimum="-180" Maximum="180" Value="0" SmallChange="1" LargeChange="15" IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="Fit_Slider" />
+                    <TextBlock Name="YawText" Grid.Column="2" Text="0°" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource TextBright}" FontSize="13" />
+                  </Grid>
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="92" />
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="52" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Height" Style="{StaticResource Label}" />
+                    <Slider Name="HeightSlider" Grid.Column="1" Minimum="0.4" Maximum="3.2" Value="1.9" SmallChange="0.05" LargeChange="0.2" IsSnapToTickEnabled="True" TickFrequency="0.05" ValueChanged="Fit_Slider" />
+                    <TextBlock Name="HeightText" Grid.Column="2" Text="1.90 m" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource TextBright}" FontSize="13" />
+                  </Grid>
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="92" />
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="52" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Up / down" Style="{StaticResource Label}" />
+                    <Slider Name="LiftSlider" Grid.Column="1" Minimum="-1" Maximum="1" Value="0" SmallChange="0.02" LargeChange="0.1" IsSnapToTickEnabled="True" TickFrequency="0.02" ValueChanged="Fit_Slider" />
+                    <TextBlock Name="LiftText" Grid.Column="2" Text="0.00" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource TextBright}" FontSize="13" />
+                  </Grid>
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="92" />
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="52" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Forward / back" Style="{StaticResource Label}" />
+                    <Slider Name="FwdSlider" Grid.Column="1" Minimum="-1" Maximum="1" Value="0" SmallChange="0.02" LargeChange="0.1" IsSnapToTickEnabled="True" TickFrequency="0.02" ValueChanged="Fit_Slider" />
+                    <TextBlock Name="FwdText" Grid.Column="2" Text="0.00" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource TextBright}" FontSize="13" />
+                  </Grid>
+                  <CheckBox Name="MirrorBox" Content="Flip left / right (if it comes out mirrored)" IsChecked="True" Margin="0,8,0,0" Click="Fit_Changed" />
+                  <TextBlock Text="LOOK" Style="{StaticResource Eyebrow}" Margin="2,20,0,8" />
+                  <StackPanel Orientation="Horizontal">
+                    <Button Content="Use my own picture…" Height="34" Padding="14,0" FontSize="13" Click="ChoosePicture_Click" />
+                    <Button Content="Use the model's colours" Height="34" Margin="8,0,0,0" Style="{StaticResource Quiet}" Click="ClearPicture_Click" />
+                  </StackPanel>
+                  <TextBlock Name="PictureText" Foreground="{DynamicResource Text2}" FontSize="12" Margin="2,8,0,0" TextWrapping="Wrap" Text="Using the model's own colours and pictures." />
+                  <TextBlock Text="SAVE" Style="{StaticResource Eyebrow}" Margin="2,20,0,8" />
+                  <Grid Height="38">
+                    <TextBox Name="NameBox" Padding="12,0" MaxLength="60" TextChanged="NameBox_Changed" />
+                    <TextBlock Name="NameHint" Text="Name your model" Foreground="{DynamicResource Text2}" FontSize="13" Margin="14,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False" />
+                  </Grid>
+                  <Grid Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="10" />
+                      <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Button Name="SaveBtn" Content="Save to My models" Height="40" Style="{StaticResource Primary}" IsEnabled="False" Click="SaveModel_Click" />
+                    <Button Name="WearBtn" Grid.Column="2" Content="Wear it now" Height="40" IsEnabled="False" Click="WearNow_Click" />
+                  </Grid>
+                  <TextBlock Name="MakerStatus" Foreground="{DynamicResource Text2}" FontSize="12" Margin="2,10,0,0" TextWrapping="Wrap" />
+                </StackPanel>
+              </ScrollViewer>
+            </Grid>
+            <Grid Name="SwapsPage" Visibility="Collapsed">
+              <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+              </Grid.RowDefinitions>
+              <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                  <Border Name="BeanRow" Style="{StaticResource Card}" Margin="0,0,0,12" Padding="18,14,16,14" Visibility="Collapsed">
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <Border Width="46" Height="46" CornerRadius="13" Background="{DynamicResource AccentGrad}" VerticalAlignment="Center">
+                        <Path Data="{StaticResource IcoCube}" Fill="{DynamicResource OnAccent}" Width="22" Height="22" Stretch="Uniform" />
+                      </Border>
+                      <StackPanel Grid.Column="1" Margin="20,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Name="BeanTitle" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextBright}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="Your bean is wearing a custom model" FontSize="12" Foreground="{DynamicResource Text2}" Margin="0,4,0,0" />
+                      </StackPanel>
+                      <Button Grid.Column="2" Content="Undo" MinWidth="92" Click="ClearBean_Click" />
+                    </Grid>
+                  </Border>
+                  <ItemsControl Name="SwapRowsHost" ItemTemplate="{StaticResource SwapRow}" />
+                  <TextBlock Name="SwapsEmpty" Text="Your bean is the normal bean. The game is exactly as Epic shipped it." Style="{StaticResource Muted}" FontSize="13" Margin="4,16,0,0" Visibility="Collapsed" />
+                </StackPanel>
+              </ScrollViewer>
+              <Button Grid.Row="1" Content="Undo everything" MinWidth="160" HorizontalAlignment="Left" Margin="0,12,0,0" Click="RevertAll_Click" />
+            </Grid>
+            <ScrollViewer Name="SettingsPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+              <StackPanel Margin="0,0,10,16">
+                <Border Style="{StaticResource Card}">
+                  <StackPanel>
+                    <TextBlock Text="Game folder" Style="{StaticResource H2}" />
+                    <TextBlock Text="The folder with FallGuys_client_game.exe in it." Foreground="{DynamicResource Text2}" FontSize="12" Margin="0,4,0,10" />
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <TextBox Name="PathBox" IsReadOnly="True" />
+                      <Button Grid.Column="1" Content="Browse…" MinWidth="110" Margin="8,0,0,0" Click="Browse_Click" />
+                    </Grid>
+                  </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                  <StackPanel>
+                    <TextBlock Text="Backups" Style="{StaticResource H2}" />
+                    <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource Text2}" FontSize="12" LineHeight="18" Margin="0,4,0,12" Text="Before the first change the app keeps a copy of the game's catalog (and of any file it edits). Undo puts those exact copies back. If the game updates, the app notices and starts over from the new files." />
+                    <StackPanel Orientation="Horizontal">
+                      <Button Content="Undo everything" MinWidth="150" Click="RevertAll_Click" />
+                      <Button Content="Open backup folder" Margin="8,0,0,0" Style="{StaticResource Quiet}" Click="OpenBackups_Click" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                  <StackPanel>
+                    <TextBlock Text="Something not working?" Style="{StaticResource H2}" />
+                    <TextBlock Text="Saves one small zip to your Downloads folder with the activity log, the tweak report and a few settings files. No keys, no game files. Send it to me and I can fix it." Style="{StaticResource Muted}" HorizontalAlignment="Left" TextWrapping="Wrap" MaxWidth="620" Margin="0,4,0,12" />
+                    <Button Content="Save a diagnostics file" HorizontalAlignment="Left" Click="Diagnostics_Click" />
+                  </StackPanel>
+                </Border>
+                <Expander Header="Activity log" Margin="4,16,0,0">
+                  <Border Style="{StaticResource Card}" Margin="0,10,0,0" Padding="16,12" Height="220">
+                    <TextBox Name="LogBox" Style="{StaticResource Bare}" IsReadOnly="True" VerticalScrollBarVisibility="Auto" TextWrapping="Wrap" FontFamily="Consolas" FontSize="12" />
+                  </Border>
+                </Expander>
+              </StackPanel>
+            </ScrollViewer>
+            <Grid Name="NoticeOverlay" ZIndex="11" Visibility="Collapsed" Background="#99101010" Margin="-40,-14,-40,-14" MouseLeftButtonDown="Backdrop_Click">
+              <Border MaxWidth="520" Margin="32" Background="{DynamicResource Panel}" BorderBrush="{DynamicResource HeroLine}" BorderThickness="1" CornerRadius="18" HorizontalAlignment="Center" VerticalAlignment="Center" MouseLeftButtonDown="Swallow_Click">
+                <UIElement.Effect>
+                  <fx:DropShadowEffect BlurRadius="50" ShadowDepth="10" Opacity="0.28" />
+                </UIElement.Effect>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="520">
+                  <StackPanel Margin="28,26,28,24">
+                    <TextBlock Name="NoticeTitle" Style="{StaticResource H1}" FontSize="26" TextWrapping="Wrap" />
+                    <TextBlock Name="NoticeText" Style="{StaticResource Body}" FontSize="14" LineHeight="22" Margin="0,12,0,0" />
+                    <StackPanel Name="NoticeButtons" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,22,0,0">
+                      <Button Name="NoticeNo" Content="Cancel" MinWidth="110" Margin="0,0,10,0" Visibility="Collapsed" Click="NoticeNo_Click" />
+                      <Button Name="NoticeYes" Content="OK" MinWidth="110" Style="{StaticResource Primary}" Click="NoticeYes_Click" />
+                    </StackPanel>
+                  </StackPanel>
+                </ScrollViewer>
+              </Border>
+            </Grid>
+          </Grid>
+        </Grid>
+      </Grid>
+    </Grid>
+  </Border>
+</Window>
