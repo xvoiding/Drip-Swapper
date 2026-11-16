@@ -12,7 +12,7 @@ namespace Drip.Core.Swapping;
 
 public static class SwapVerifier
 {
-	private static readonly Regex AssetRef = new Regex("\"(/[A-Za-z0-9_\\-/]+(?:\\.[A-Za-z0-9_\\-]+)?)\"", RegexOptions.Compiled);
+	private static readonly Regex AssetRef = new Regex("\"(/[A-Za-z0-9_\\\\-/]+(?:\\\\.[A-Za-z0-9_\\\\-]+)?)\"", RegexOptions.Compiled);
 
 	public static List<string> Preflight(string paks)
 	{
@@ -144,8 +144,7 @@ public static class SwapVerifier
 				report.Add(VerifyLevel.Fail, name, "a recorded patch position lies outside the .utoc.");
 				return;
 			}
-			array3.CopyTo(array, (int)rec.BlockPos);
-			array4.CopyTo(array, (int)rec.OffsetLengthPos);
+			IoContainer.RestoreRecorded(array, rec);
 		}
 		int num = 0;
 		int num2 = -1;
@@ -173,6 +172,15 @@ public static class SwapVerifier
 		{
 			report.Add(VerifyLevel.Fail, name, text + ": the live .utoc does not hold this swap any more (reverted by a repair or update, or never written).");
 			return;
+		}
+		if (!TocSignature.IsSealed(Path.Combine(paks, name + ".utoc"), rec))
+		{
+			report.Add(VerifyLevel.Fail, name, text + ": the container's signature hashes don't match the patched blocks, so Fortnite will reject it online. Swap again to re-seal.");
+			return;
+		}
+		if (rec.SealError.Length > 0)
+		{
+			report.Add(VerifyLevel.Warn, name, text + ": " + rec.SealError + ".");
 		}
 		int num = Math.Max(rec.BlockCount, 1);
 		for (int i = 0; i < num; i++)
