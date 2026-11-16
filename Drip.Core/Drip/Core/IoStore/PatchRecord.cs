@@ -35,4 +35,29 @@ public sealed class PatchRecord
 	public long UtocWriteUtcTicks { get; set; }
 
 	public long UcasWriteUtcTicks { get; set; }
+
+	// Signature re-seal, so the container still passes the game's block check and online play
+	// doesn't drop the session. All three regions are restored by Revert.
+
+	public long HashRegionPos { get; set; } = -1;
+
+	public string OriginalHashes { get; set; } = "";
+
+	public string PatchedHashes { get; set; } = "";
+
+	public long SignaturePos { get; set; } = -1;
+
+	public string OriginalSignature { get; set; } = "";
+
+	public string PatchedSignature { get; set; } = "";
+
+	public long MetaPos { get; set; } = -1;
+
+	public string OriginalMeta { get; set; } = "";
+
+	public string PatchedMeta { get; set; } = "";
+
+	public bool Sealed { get; set; }
+
+	public string SealError { get; set; } = "";
 }
