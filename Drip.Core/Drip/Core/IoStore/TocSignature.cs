@@ -237,7 +237,7 @@ public sealed class TocSignature
 		int exactHits = 0;
 		int alignedHits = 0;
 		int tested = 0;
-		int step = Math.Max(c.Toc.BlockCount / ProbeSamples, 1);
+		int step = (int)Math.Max(c.Toc.BlockCount / (uint)ProbeSamples, 1u);
 		for (int i = 0; i < c.Toc.BlockCount && tested < ProbeSamples; i += step)
 		{
 			tested++;
