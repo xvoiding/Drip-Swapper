@@ -456,6 +456,7 @@ public sealed class SwapEngine
 			list2.Add(patchRecord);
 			num2++;
 			_log($"Patched {item3.Container.Name} chunk {item3.Index}.");
+			LogSeal(patchRecord, _log);
 		}
 		return new SwapResult
 		{
@@ -521,6 +522,7 @@ public sealed class SwapEngine
 			SaveOriginalPak(item2.Container);
 			num2++;
 			_log($"Patched {item2.Container.Name} chunk {item2.Index}.");
+			LogSeal(patchRecord, _log);
 		}
 		return new SwapResult
 		{
@@ -575,6 +577,7 @@ public sealed class SwapEngine
 			list.Add(patchRecord);
 			num++;
 			_log($"Patched {item3.Container.Name} chunk {item3.Index} ({text}).");
+			LogSeal(patchRecord, _log);
 		}
 		return new SwapResult
 		{
@@ -640,6 +643,7 @@ public sealed class SwapEngine
 			SaveOriginalPak(item2.Container);
 			num++;
 			_log($"Patched {item2.Container.Name} chunk {item2.Index} ({text}, type {type}).");
+			LogSeal(patchRecord, _log);
 			try
 			{
 				TocFile.Load(item2.Container.LiveUtocPath);
@@ -657,6 +661,18 @@ public sealed class SwapEngine
 			OldSize = oldSize,
 			NewSize = data.Length
 		};
+	}
+
+	private static void LogSeal(PatchRecord rec, Action<string> log)
+	{
+		if (rec.SealError.Length > 0)
+		{
+			log("signature: " + rec.SealError + ".");
+		}
+		else if (rec.Sealed)
+		{
+			log("Re-sealed " + rec.Container + " (block hashes, both signatures and the chunk meta) so the signature check passes.");
+		}
 	}
 
 	private void SaveOriginalPak(IoContainer c)
