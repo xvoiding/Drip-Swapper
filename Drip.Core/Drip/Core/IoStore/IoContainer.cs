@@ -123,6 +123,15 @@ public sealed class IoContainer
 		return array;
 	}
 
+	/// <summary>
+	/// The bytes of a block exactly as they sit in the .ucas, padding included.
+	/// </summary>
+	public byte[] ReadStored(int blockIndex)
+	{
+		TocBlock block = Toc.GetBlock(blockIndex);
+		return ReadPhysical(block.Offset, Align16(block.CompressedSize));
+	}
+
 	public void EnsureBackup()
 	{
 		if (!File.Exists(BackupUtocPath))
@@ -157,10 +166,46 @@ public sealed class IoContainer
 			{
 				return false;
 			}
-			array3.CopyTo(array, (int)item.BlockPos);
-			array4.CopyTo(array, (int)item.OffsetLengthPos);
+			RestoreRecorded(array, item);
 		}
 		return ((ReadOnlySpan<byte>)array.AsSpan()).SequenceEqual((ReadOnlySpan<byte>)array2);
+	}
+
+	/// <summary>
+	/// Puts the recorded originals of a patch back into a copy of the toc, so callers can compare
+	/// it against a backup. Used by BackupIsCurrent and the verifier.
+	/// </summary>
+	public static void RestoreRecorded(byte[] tocBytes, PatchRecord rec)
+	{
+		Apply(rec.OriginalBlock, rec.BlockPos);
+		Apply(rec.OriginalOffsetLength, rec.OffsetLengthPos);
+		Apply(rec.OriginalHashes, rec.HashRegionPos);
+		Apply(rec.OriginalSignature, rec.SignaturePos);
+		Apply(rec.OriginalMeta, rec.MetaPos);
+
+		void Apply(string hex, long pos)
+		{
+			if (hex.Length == 0 || pos < 0)
+			{
+				return;
+			}
+			byte[] bytes = Convert.FromHexString(hex);
+			if (pos + bytes.Length > tocBytes.Length)
+			{
+				return;
+			}
+			bytes.CopyTo(tocBytes, (int)pos);
+		}
+	}
+
+	private static void RestoreRegion(FileStream fs, string hex, long pos)
+	{
+		if (hex.Length == 0 || pos < 0)
+		{
+			return;
+		}
+		fs.Position = pos;
+		fs.Write(Convert.FromHexString(hex));
 	}
 
 	public static bool RecordIsApplied(string paksDirectory, PatchRecord rec)
@@ -185,7 +230,7 @@ public sealed class IoContainer
 			fileStream.ReadExactly(array3);
 			fileStream.Position = rec.OffsetLengthPos;
 			fileStream.ReadExactly(array4);
-			return ((ReadOnlySpan<byte>)array3.AsSpan()).SequenceEqual((ReadOnlySpan<byte>)array) && ((ReadOnlySpan<byte>)array4.AsSpan()).SequenceEqual((ReadOnlySpan<byte>)array2);
+			return ((ReadOnlySpan<byte>)array3.AsSpan()).SequenceEqual((ReadOnlySpan<byte>)array) && ((ReadOnlySpan<byte>)array4.AsSpan()).SequenceEqual((ReadOnlySpan<byte>)array2) && TocSignature.IsSealed(path, rec);
 		}
 		catch
 		{
@@ -254,9 +299,11 @@ public sealed class IoContainer
 		ulong num6 = (ulong)(((Toc.PartitionSize == ulong.MaxValue) ? 0 : ((long)num4 * (long)Toc.PartitionSize)) + num5);
 		List<byte> list = new List<byte>(num3 * 12);
 		List<byte> list2 = new List<byte>(num3 * 12);
+		int[] lengths = new int[num3];
 		for (int i = 0; i < num3; i++)
 		{
 			uint num7 = (uint)Math.Min(blockSize, (exactLength ? newData.Length : array.Length) - i * blockSize);
+			lengths[i] = (int)num7;
 			list.AddRange(TocFile.EncodeBlock(num6 + (ulong)(i * blockSize), num7, num7, 0));
 			list2.AddRange(Toc.RawBlockBytes(num + i));
 		}
@@ -280,12 +327,29 @@ public sealed class IoContainer
 			UtocWriteUtcTicks = ticks,
 			UcasWriteUtcTicks = ticks2
 		};
-		using FileStream fileStream2 = new FileStream(LiveUtocPath, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
-		fileStream2.Position = patchRecord.BlockPos;
-		fileStream2.Write(array3);
-		fileStream2.Position = patchRecord.OffsetLengthPos;
-		fileStream2.Write(array4);
-		fileStream2.Flush(flushToDisk: true);
+		using (FileStream fileStream2 = new FileStream(LiveUtocPath, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite))
+		{
+			fileStream2.Position = patchRecord.BlockPos;
+			fileStream2.Write(array3);
+			fileStream2.Position = patchRecord.OffsetLengthPos;
+			fileStream2.Write(array4);
+			fileStream2.Flush(flushToDisk: true);
+		}
+		TocSeal? seal = TocSignature.Seal(this, num, lengths, chunkIndex, array2, exactLength ? newData : array);
+		if (seal != null)
+		{
+			patchRecord.HashRegionPos = seal.HashRegionPos;
+			patchRecord.OriginalHashes = seal.OriginalHashes;
+			patchRecord.PatchedHashes = seal.PatchedHashes;
+			patchRecord.SignaturePos = seal.SignaturePos;
+			patchRecord.OriginalSignature = seal.OriginalSignature;
+			patchRecord.PatchedSignature = seal.PatchedSignature;
+			patchRecord.MetaPos = seal.MetaPos;
+			patchRecord.OriginalMeta = seal.OriginalMeta;
+			patchRecord.PatchedMeta = seal.PatchedMeta;
+			patchRecord.Sealed = seal.Ok;
+			patchRecord.SealError = seal.Error;
+		}
 		return patchRecord;
 	}
 
@@ -307,7 +371,7 @@ public sealed class IoContainer
 			fileStream.ReadExactly(array3);
 			fileStream.Position = rec.OffsetLengthPos;
 			fileStream.ReadExactly(array4);
-			return ((ReadOnlySpan<byte>)array3.AsSpan()).SequenceEqual((ReadOnlySpan<byte>)array) && ((ReadOnlySpan<byte>)array4.AsSpan()).SequenceEqual((ReadOnlySpan<byte>)array2);
+			return ((ReadOnlySpan<byte>)array3.AsSpan()).SequenceEqual((ReadOnlySpan<byte>)array) && ((ReadOnlySpan<byte>)array4.AsSpan()).SequenceEqual((ReadOnlySpan<byte>)array2) && TocSignature.IsSealed(path, rec);
 		}
 		catch
 		{
@@ -340,6 +404,9 @@ public sealed class IoContainer
 			fileStream.Write(Convert.FromHexString(rec.OriginalBlock));
 			fileStream.Position = rec.OffsetLengthPos;
 			fileStream.Write(Convert.FromHexString(rec.OriginalOffsetLength));
+			RestoreRegion(fileStream, rec.OriginalHashes, rec.HashRegionPos);
+			RestoreRegion(fileStream, rec.OriginalSignature, rec.SignaturePos);
+			RestoreRegion(fileStream, rec.OriginalMeta, rec.MetaPos);
 			fileStream.Flush(flushToDisk: true);
 		}
 		if (rec.UcasFile.Length > 0)
