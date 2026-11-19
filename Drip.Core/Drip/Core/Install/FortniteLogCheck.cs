@@ -10,7 +10,7 @@ public static class FortniteLogCheck
 {
 	private static readonly Regex Sig = new Regex("Signature error detected in container '(?<c>[^']+)'", RegexOptions.Compiled);
 
-	public const string Advice = "Fortnite's log reports a signature error in the container(s) listed above. Swaps are re-sealed with fresh SHA-1 block hashes, so this means a seal was skipped or something rewrote the file afterwards. Close Fortnite and the Epic launcher, then swap again; if it persists, Revert all and swap once more.";
+	public const string Advice = "Fortnite's log reports a signature error in the container(s) listed above: the game checks every block of its signed files and a swapped container fails that check, which can leave the game stuck on \"Logging in\" or show \"Verification Required\". Close Fortnite and the Epic launcher, then press Undo all swaps / Revert all.";
 
 	public static List<string> SignatureErrors(string logText)
 	{

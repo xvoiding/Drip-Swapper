@@ -2,7 +2,7 @@
 
 A Windows skin swapper written in C# (WPF, .NET 10). It swaps cosmetics in Fortnite, Rocket League and Fall Guys, and includes a custom model maker that builds `.dripFN` / `.dripRL` / `.dripFG` packs from FBX, GLB, OBJ and other formats. Retrac (OG server) and Project Stellar (Chapter 2 Season 2 and older) have their own windows.
 
-Anybody reading this, please make a bypass for Drip Swapper so we can let our skin swaps go into matches.
+Use it offline only. It does not hide anything from anti-cheat.
 
 ## Build
 
